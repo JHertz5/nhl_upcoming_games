@@ -8,18 +8,36 @@ import json
 import requests
 from datetime import datetime,date,timedelta,timezone,time
 
-# specify date range
+# specify filter values and generate request modifier
 week_range = 2    # end date is week_range weeks after start
 date_filter = {
     'start' : date.today().isoformat(),
     'end'   : (date.today() + timedelta(weeks=week_range)).isoformat()
 }
-
-# request json data
-url = "https://statsapi.web.nhl.com/api/v1/schedule?startDate={}&endDate={}".format(
+request_modifier = "startDate={}&endDate={}".format(
     date_filter['start'],
     date_filter['end']
 )
+
+selection = input('(r)angers, (e)arly or (a)ll?\n')
+if selection == 'r':
+    print('rangers selected')
+    rangers_id = '3'
+    request_modifier = "teamId={}&".format(rangers_id) + request_modifier
+elif selection == 'e':
+    print('early selected')
+    time_filter = {
+        'start' :   time(hour=7),
+        'end'   :   time(hour=23)
+    }
+elif selection == 'a':
+    print('all selected')
+else:
+    print('selection not recognised')
+
+# request json data
+url = "https://statsapi.web.nhl.com/api/v1/schedule?" + request_modifier
+print(url)
 response = requests.get(url)
 if response.status_code == 200:
     print('data retreived')
@@ -27,20 +45,12 @@ else:
     print('reponse code = {}'.format(response.status_code))
     raise Exception('Error, data was not successfully accessed')
 
-# specify time range
-time_filter = {
-    'start' :   time(hour=7),
-    'end'   :   time(hour=23)
-}
-
 data_head = json.loads(response.text) # convert json data into dict
 
 # print limits
-print('{} - {} ({} - {})'.format(
+print('{} - {}'.format(
     date_filter['start'],
-    date_filter['end'],
-    time_filter['start'],
-    time_filter['end']
+    date_filter['end']
 ))
 
 # process json data to select games with start times within filter limits
@@ -59,7 +69,16 @@ for date in date_list:
         #convert to local time
         game_datetime = game_datetime.replace(tzinfo = timezone.utc).astimezone()
 
-        if time_filter['start'] < game_datetime.time() < time_filter['end']:
+        if selection == 'e':
+            if time_filter['start'] < game_datetime.time() < time_filter['end']:
+                # generate list entry
+                watchable_game = {
+                    'time' :   game_datetime.strftime('%H:%M'),
+                    'home_team'   :   game['teams']['home']['team']['name'],
+                    'away_team'   :   game['teams']['away']['team']['name']
+                }
+                watchable_date['games'].append(watchable_game)
+        else:
             # generate list entry
             watchable_game = {
                 'time' :   game_datetime.strftime('%H:%M'),
