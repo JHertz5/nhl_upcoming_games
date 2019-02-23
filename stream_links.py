@@ -50,10 +50,10 @@ def get_thread_link(offline=False):
 
     # get selection
     thread_selection = int(input())
-    print('Selected: {}'.format(thread['title']))
+    print('Selected: {}'.format(thread_list[thread_selection]['title']))
 
     # return .json url
-    return thread['url'] + '.json'
+    return thread_list[thread_selection]['url'] + '.json'
 
 def get_stream_link(stream_uri, offline=False):
     """
